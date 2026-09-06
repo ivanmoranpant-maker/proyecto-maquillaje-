@@ -42,6 +42,77 @@ function selectShade(shade, btn) {
   shadeInput.value = `${shade.num} · ${shade.name}`;
 }
 
+// ==================== SCROLL REVEAL ====================
+const revealEls = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  },
+  { threshold: 0.15 }
+);
+revealEls.forEach((el) => observer.observe(el));
+
+// ==================== CATÁLOGO (data/productos.js) ====================
+function formatoCOP(numero) {
+  return '$' + Number(numero).toLocaleString('es-CO');
+}
+
+const catalogGrid = document.getElementById('catalogGrid');
+
+if (catalogGrid) {
+  const lista = typeof PRODUCTOS !== 'undefined' ? PRODUCTOS : [];
+
+  if (lista.length === 0) {
+    catalogGrid.innerHTML = '<p class="catalog__empty">Pronto verás más productos aquí. Agrégalos en data/productos.js</p>';
+  } else {
+    lista.forEach((producto) => {
+      const card = document.createElement('article');
+      card.className = 'product-tile reveal';
+
+      const inicial = producto.nombre ? producto.nombre.trim().charAt(0).toUpperCase() : '?';
+      const tonosHtml = producto.tonos
+        ? `<span class="product-tile__tonos">${producto.tonos} tonos disponibles</span>`
+        : '';
+
+      card.innerHTML = `
+        <div class="product-tile__img">
+          <div class="product-tile__placeholder">${inicial}</div>
+        </div>
+        <div class="product-tile__body">
+          <span class="product-tile__brand">${producto.marca || ''}</span>
+          <h3>${producto.nombre || 'Producto'}</h3>
+          <p>${producto.descripcion || ''}</p>
+          ${tonosHtml}
+          <div class="product-tile__footer">
+            <span class="price">${formatoCOP(producto.precio || 0)}</span>
+            <a href="#comprar" class="btn btn--ghost btn--sm">Comprar</a>
+          </div>
+        </div>
+      `;
+
+      // Si la imagen real existe, la mostramos en vez del placeholder.
+      if (producto.imagen) {
+        const img = new Image();
+        img.alt = producto.nombre || '';
+        img.onload = () => {
+          const contenedor = card.querySelector('.product-tile__img');
+          contenedor.innerHTML = '';
+          contenedor.appendChild(img);
+        };
+        img.src = producto.imagen;
+      }
+
+      catalogGrid.appendChild(card);
+      observer.observe(card);
+    });
+  }
+}
+
 // ==================== MOBILE NAV ====================
 const navBurger = document.getElementById('navBurger');
 const navLinks = document.getElementById('navLinks');
@@ -74,21 +145,6 @@ function showToast(message) {
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => toast.classList.remove('is-visible'), 3000);
 }
-
-// ==================== SCROLL REVEAL ====================
-const revealEls = document.querySelectorAll('.reveal');
-const observer = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('is-visible');
-        observer.unobserve(entry.target);
-      }
-    });
-  },
-  { threshold: 0.15 }
-);
-revealEls.forEach((el) => observer.observe(el));
 
 // ==================== FOOTER YEAR ====================
 document.getElementById('year').textContent = new Date().getFullYear();

@@ -494,6 +494,90 @@ p{ color: var(--ink-soft); line-height: 1.65; }
 }
 .shades__selected.is-set{ color: var(--terracotta); font-weight:600; }
 
+/* ==================== CATALOG ==================== */
+.catalog{ padding: 90px 0; }
+.catalog__grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 28px;
+}
+.catalog__empty{
+  grid-column: 1 / -1;
+  text-align:center;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  padding: 30px;
+  border: 1.5px dashed rgba(58,46,40,0.2);
+  border-radius: var(--radius-md);
+}
+.product-tile{
+  background: var(--white);
+  border-radius: var(--radius-md);
+  overflow:hidden;
+  box-shadow: var(--shadow-soft);
+  display:flex;
+  flex-direction:column;
+}
+.product-tile__img{
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(160deg, var(--cream-deep), var(--blush));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.product-tile__img img{
+  width:100%;
+  height:100%;
+  object-fit: cover;
+}
+.product-tile__placeholder{
+  font-family: var(--ff-serif);
+  font-size: 2.4rem;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--terracotta), var(--gold));
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.product-tile__body{
+  padding: 24px;
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  flex:1;
+}
+.product-tile__brand{
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  font-weight:600;
+}
+.product-tile__body h3{
+  font-size: 1.3rem;
+}
+.product-tile__body p{
+  font-size: 0.85rem;
+  flex:1;
+}
+.product-tile__tonos{
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.03em;
+}
+.product-tile__footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top: 10px;
+}
+.product-tile__footer .price{ font-size: 1.3rem; }
+.btn--sm{ padding: 9px 20px; font-size: 0.82rem; }
+
 /* ==================== TESTIMONIALS ==================== */
 .testimonials{ padding: 90px 0; }
 .testimonials__grid{
