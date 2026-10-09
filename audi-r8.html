@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Audi R8</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&display=block" rel="stylesheet">
+  <style>
+    /*
+      Animación vertical 9:16 (~26 s). Toca la pantalla para empezar;
+      al terminar, otro toque la repite. Ritmo base: 120 BPM (un golpe cada 0,5 s).
+
+        0–2 s    punto rojo que late
+        2–5 s    el punto se estira en una línea → "V10"
+        5–8 s    contadores 5.2 L / 620 CV
+        8–12 s   tacómetro, aguja a la zona roja, líneas de velocidad
+       12–15 s   0 – 100 km/h + cronómetro hasta 3,1 s
+       15–18 s   contador hasta 331 km/h
+       18–21 s   silueta del auto en una sola línea
+       21–24 s   AUDI R8 letra por letra + 2006 – 2024
+       24–26.6 s "Las leyendas no se repiten." y fundido a negro
+
+      Todo el contenido importante vive en la zona segura de TikTok/Reels:
+      centrado en (46 %, 45 %), lejos del 20 % inferior y del borde derecho.
+    */
+    :root {
+      --bg: #0a0a0a;
+      --fg: #fff;
+      --red: #E10600;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      overflow: hidden;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    body.playing { cursor: none; }
+
+    #stage {
+      position: relative;
+      width: min(100vw, 56.25vh);
+      width: min(100vw, 56.25dvh);
+      aspect-ratio: 9 / 16;
+      container-type: inline-size;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Barlow Condensed", "Avenir Next Condensed", "HelveticaNeue-CondensedBold",
+                   "Roboto Condensed", "Arial Narrow", sans-serif;
+      font-stretch: condensed;
+      font-weight: 700;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #cam {
+      position: absolute;
+      inset: 0;
+      transform-origin: 46% 45%;
+    }
+
+    #lines {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Elementos centrados en un punto; el JS añade desplazamiento y escala */
+    .el {
+      position: absolute;
+      left: 46%;
+      top: 45%;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      visibility: hidden;
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    .n { font-variant-numeric: tabular-nums; }
+    .u { font-weight: 600; opacity: 0.6; }
+
+    /* Punto rojo (estado inicial visible: invita a tocar sin texto) */
+    #dot {
+      position: absolute;
+      left: calc(46% - 1.2cqw);
+      top: calc(45% - 1.2cqw);
+      width: 2.4cqw;
+      height: 2.4cqw;
+      border-radius: 999px;
+      background: var(--red);
+      box-shadow: 0 0 1.2cqw rgba(225, 6, 0, 0.35);
+    }
+
+    #ring {
+      position: absolute;
+      left: calc(46% - 1.2cqw);
+      top: calc(45% - 1.2cqw);
+      width: 2.4cqw;
+      height: 2.4cqw;
+      border-radius: 50%;
+      border: 0.25cqw solid var(--red);
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    #v10 {
+      top: 37%;
+      font-size: 46cqw;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    #stats {
+      top: 57.5%;
+      display: flex;
+      gap: 10cqw;
+    }
+    .stat { display: inline-flex; align-items: baseline; }
+    .stat .n { font-size: 15cqw; }
+    .stat .u { font-size: 8cqw; margin-left: 0.3em; }
+    .stat:last-child .n { display: inline-block; min-width: 3ch; text-align: right; }
+
+    #tach { top: 46%; width: 74cqw; overflow: visible; }
+
+    #accel {
+      top: 37%;
+      font-size: 11cqw;
+      letter-spacing: 0.01em;
+    }
+
+    #chrono { top: 51%; display: flex; align-items: baseline; }
+    #chrono .n { font-size: 34cqw; font-weight: 800; }
+    #chrono .u { font-size: 12cqw; margin-left: 0.15em; }
+
+    #vmax {
+      top: 45%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #vmax .n { font-size: 44cqw; font-weight: 800; line-height: 0.9; min-width: 3ch; text-align: center; }
+    #vmax .u { font-size: 10cqw; letter-spacing: 0.08em; margin-top: 1cqw; }
+
+    #car {
+      position: absolute;
+      left: 0;
+      top: calc(40% - 14.6cqw);
+      width: 100%;
+      overflow: visible;
+      opacity: 0;
+      visibility: hidden;
+      fill: none;
+      stroke: var(--fg);
+      stroke-width: 3.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    #brand {
+      top: 56.5%;
+      font-size: 13cqw;
+      font-weight: 800;
+      letter-spacing: 0.35em;
+      padding-left: 0.35em; /* compensa el espaciado tras la última letra */
+    }
+    #brand span { display: inline-block; opacity: 0; }
+    #brand .gap { width: 0.3em; }
+
+    #years {
+      top: 62.5%;
+      font-size: 5cqw;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      padding-left: 0.3em;
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    #outro {
+      top: 45%;
+      font-size: 13.5cqw;
+      line-height: 1.02;
+      text-align: center;
+    }
+    #outro .line { display: block; }
+    #outro .w { opacity: 0; }
+    #outro .period { display: inline-block; color: var(--red); opacity: 0; transform-origin: 50% 85%; }
+  </style>
+</head>
+<body>
+  <main id="stage" aria-label="Animación: Audi R8">
+    <div id="cam">
+      <canvas id="lines"></canvas>
+
+      <div id="ring"></div>
+      <div id="dot"></div>
+
+      <div id="v10" class="el">V10</div>
+
+      <div id="stats" class="el">
+        <div class="stat"><span class="n">0.0</span><span class="u">L</span></div>
+        <div class="stat"><span class="n">0</span><span class="u">CV</span></div>
+      </div>
+
+      <svg id="tach" class="el" viewBox="-110 -108 220 122" aria-hidden="true"></svg>
+
+      <div id="accel" class="el">0 – 100 km/h</div>
+      <div id="chrono" class="el"><span class="n">0,0</span><span class="u">s</span></div>
+
+      <div id="vmax" class="el"><span class="n">0</span><span class="u">km/h</span></div>
+
+      <!-- Silueta lateral: una línea entra por la izquierda, dibuja el auto y sale por la derecha -->
+      <svg id="car" viewBox="0 0 1000 300" aria-hidden="true">
+        <path class="lead" d="M0 176 H90"/>
+        <path d="M90 176 C90 150 94 112 100 92 L108 86 C190 80 290 64 362 52 C392 46 432 42 468 47 C512 56 552 84 588 104 C640 112 715 116 768 132 C800 142 818 158 820 176"/>
+        <path d="M90 176 C90 196 98 212 124 216 L160 222 L160 195 A68 68 0 0 1 296 195 L296 222 L597 222 L597 195 A68 68 0 0 1 733 195 L733 222 L772 222 C798 221 814 212 818 198 C820 190 820 182 820 176"/>
+        <path d="M173 195 A55 55 0 0 1 283 195"/>
+        <path d="M173 195 A55 55 0 0 0 283 195"/>
+        <path d="M610 195 A55 55 0 0 1 720 195"/>
+        <path d="M610 195 A55 55 0 0 0 720 195"/>
+        <path class="lead" d="M820 176 H1000"/>
+      </svg>
+
+      <div id="brand" class="el"><span>A</span><span>U</span><span>D</span><span>I</span><span class="gap"></span><span>R</span><span>8</span></div>
+      <div id="years" class="el">2006 – 2024</div>
+
+      <div id="outro" class="el">
+        <span class="line"><span class="w">Las leyendas</span></span>
+        <span class="line"><span class="w">no se repiten</span><span class="period">.</span></span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const BEAT = 0.5;   // 120 BPM
+      const END = 26.6;
+      const CX = 46, CY = 45;
+
+      const $ = (s, root = document) => root.querySelector(s);
+      const stage = $('#stage'), cam = $('#cam'), canvas = $('#lines'), ctx = canvas.getContext('2d');
+      const dot = $('#dot'), ring = $('#ring'), v10 = $('#v10'), stats = $('#stats');
+      const tach = $('#tach'), accel = $('#accel'), chrono = $('#chrono'), vmax = $('#vmax');
+      const car = $('#car'), brand = $('#brand'), years = $('#years'), outro = $('#outro');
+      const statEls = [...stats.children];
+      const chronoN = $('.n', chrono), vmaxN = $('.n', vmax);
+      const letters = [...brand.children].filter(el => !el.classList.contains('gap'));
+      const [line1, line2] = outro.querySelectorAll('.line');
+      const [word1, word2] = outro.querySelectorAll('.w');
+      const period = $('.period', outro);
+
+      // ---------- utilidades ----------
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const lerp = (a, b, p) => a + (b - a) * p;
+      const prog = (t, a, b) => clamp((t - a) / (b - a));
+      const ease = {
+        inCubic: p => p * p * p,
+        outCubic: p => 1 - (1 - p) ** 3,
+        inOutCubic: p => (p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2),
+        inOutSine: p => -(Math.cos(Math.PI * p) - 1) / 2,
+        outQuad: p => 1 - (1 - p) ** 2,
+        outQuart: p => 1 - (1 - p) ** 4,
+        outExpo: p => (p >= 1 ? 1 : 1 - 2 ** (-10 * p)),
+        outBack: p => 1 + 2.70158 * (p - 1) ** 3 + 1.70158 * (p - 1) ** 2,
+      };
+      // golpe: subida rápida y caída exponencial, tau = segundos desde el golpe
+      const kick = tau => (tau < 0 ? 0 : tau < 0.06 ? ease.outCubic(tau / 0.06) : Math.exp(-(tau - 0.06) * 9));
+
+      function hide(el) {
+        el.style.opacity = 0;
+        el.style.visibility = 'hidden';
+      }
+      // elemento .el: centrado en su punto, con desplazamiento (cqw) y escala
+      function place(el, o, x = 0, y = 0, s = 1) {
+        o = clamp(o);
+        el.style.opacity = o;
+        el.style.visibility = o > 0.001 ? 'visible' : 'hidden';
+        el.style.transform = `translate(-50%, -50%) translate(${x}cqw, ${y}cqw) scale(${s})`;
+      }
+      // hijo dentro de un elemento colocado
+      function fx(el, o, y = 0, s = 1) {
+        el.style.opacity = clamp(o);
+        el.style.transform = `translateY(${y}cqw) scale(${s})`;
+      }
+
+      // ---------- tacómetro ----------
+      const NS = 'http://www.w3.org/2000/svg', RED = '#E10600';
+      const R = 95, REDLINE = 0.78;
+      // v = 0 apunta a la izquierda, v = 1 a la derecha, pasando por arriba
+      const polar = (v, r) => [r * Math.cos(Math.PI * (1 + v)), r * Math.sin(Math.PI * (1 + v))];
+      const svg = (tag, attrs, parent = tach) => {
+        const el = document.createElementNS(NS, tag);
+        for (const k in attrs) el.setAttribute(k, attrs[k]);
+        return parent.appendChild(el);
+      };
+      const tick = v => { const [a, b] = polar(v, R - 13), [c, d] = polar(v, R - 6); return `M${a} ${b} L${c} ${d}`; };
+      const arc = svg('path', { d: `M${-R} 0 A${R} ${R} 0 0 1 ${R} 0`, fill: 'none', stroke: '#fff', 'stroke-width': 1.4 });
+      const [rx, ry] = polar(REDLINE, R);
+      const redArc = svg('path', { d: `M${rx} ${ry} A${R} ${R} 0 0 1 ${R} 0`, fill: 'none', stroke: RED, 'stroke-width': 4 });
+      let whiteTicks = '', redTicks = '';
+      for (let i = 0; i <= 10; i++) {
+        if (i >= 8) redTicks += tick(i / 10);
+        else whiteTicks += tick(i / 10);
+      }
+      const ticks = svg('g', { 'stroke-width': 1.4, 'stroke-linecap': 'round' });
+      svg('path', { d: whiteTicks, stroke: '#fff' }, ticks);
+      svg('path', { d: redTicks, stroke: RED }, ticks);
+      const needle = svg('g', {});
+      svg('line', { x1: 12, y1: 0, x2: -80, y2: 0, stroke: RED, 'stroke-width': 2.6, 'stroke-linecap': 'round' }, needle);
+      svg('circle', { r: 5, fill: '#0a0a0a', stroke: '#fff', 'stroke-width': 1.6 });
+      const ARC_LEN = arc.getTotalLength(), RED_LEN = redArc.getTotalLength();
+      arc.style.strokeDasharray = ARC_LEN;
+      redArc.style.strokeDasharray = RED_LEN;
+
+      // ---------- silueta: longitud visible de cada trazo según la x del lápiz ----------
+      const carPaths = [...car.querySelectorAll('path')].map(el => {
+        const len = el.getTotalLength(), n = 300, xs = new Float32Array(n + 1);
+        let mx = -Infinity;
+        for (let i = 0; i <= n; i++) xs[i] = mx = Math.max(mx, el.getPointAtLength((len * i) / n).x);
+        return { el, len, xs, n, lead: el.classList.contains('lead') };
+      });
+      function lenAtX(p, X) {
+        if (X <= p.xs[0]) return 0;
+        if (X >= p.xs[p.n]) return p.len;
+        let lo = 0, hi = p.n;
+        while (hi - lo > 1) {
+          const mid = (lo + hi) >> 1;
+          if (p.xs[mid] <= X) lo = mid; else hi = mid;
+        }
+        const f = (X - p.xs[lo]) / (p.xs[hi] - p.xs[lo] || 1);
+        return (p.len * (lo + f)) / p.n;
+      }
+
+      // ---------- líneas de velocidad ----------
+      let seed = 8;
+      const rand = () => {
+        seed = (seed + 0x6d2b79f5) | 0;
+        let r = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+      const LINES = Array.from({ length: 64 }, () => ({
+        y: rand(), len: 0.08 + rand() * 0.3, speed: 0.6 + rand(), phase: rand(),
+        w: rand() < 0.25 ? 2 : 1, a: 0.15 + rand() * 0.45, red: rand() < 0.07,
+      }));
+      const K = Math.log(7 / 1.35) / 3;
+      // velocidad en anchos de pantalla por segundo, y distancia recorrida desde los 9 s
+      const vel = t => (t < 12 ? 0.9 : t < 15 ? 0.9 + 0.15 * (t - 12) : 1.35 * Math.exp(K * (t - 15)));
+      function dist(t) {
+        if (t <= 9) return 0;
+        if (t < 12) return 0.9 * (t - 9);
+        if (t < 15) { const a = t - 12; return 2.7 + 0.9 * a + 0.075 * a * a; }
+        return 6.075 + (1.35 / K) * (Math.exp(K * (t - 15)) - 1);
+      }
+      function intensity(t) {
+        if (t < 9) return 0;
+        let I = 0.55 * prog(t, 9, 9.25);
+        I = lerp(I, 0.35, prog(t, 11.85, 12.2));
+        I = lerp(I, 0.95, prog(t, 15, 17.9));
+        return I * (1 - prog(t, 17.9, 18.15));
+      }
+      let cw = 0, ch = 0, px = 1;
+      function resize() {
+        const r = stage.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = cw = Math.round(r.width * dpr);
+        canvas.height = ch = Math.round(r.height * dpr);
+        px = cw / 540;
+        if (lastT !== null) render(lastT);
+      }
+      function speedLines(t) {
+        ctx.clearRect(0, 0, cw, ch);
+        const I = intensity(t);
+        if (I <= 0) return;
+        const v = vel(t), D = dist(t);
+        for (const L of LINES) {
+          const len = L.len * (0.5 + 0.35 * v) * cw;
+          const span = cw + len;
+          const u = (L.phase + (D * L.speed * cw) / span) % 1;
+          const x = cw - u * span;
+          const c = L.red ? '225, 6, 0' : '255, 255, 255';
+          const g = ctx.createLinearGradient(x, 0, x + len, 0);
+          g.addColorStop(0, `rgba(${c}, ${L.a * I})`);
+          g.addColorStop(1, `rgba(${c}, 0)`);
+          ctx.fillStyle = g;
+          ctx.fillRect(x, L.y * ch, len, L.w * px);
+        }
+      }
+
+      // ---------- cámara: vibración y pulso al ritmo ----------
+      const IMPACTS = [[2.56, 1.6, 9], [9.02, 1.1, 7], [14, 0.5, 10], [17, 0.9, 8]];
+      function camera(t) {
+        let a = 0;
+        for (const [at, amp, k] of IMPACTS) if (t >= at) a += amp * Math.exp(-(t - at) * k);
+        if (t >= 9 && t < 11.85) a += 0.16;
+        if (t < 18) a += 0.4 * prog(t, 15, 17.9);
+        let s = 1;
+        if (t >= 9 && t < 18) s += 0.012 * Math.exp(-((t - 9) % BEAT) * 10);
+        const dx = a * (0.6 * Math.sin(t * 97.1) + 0.4 * Math.sin(t * 61.3 + 1.7));
+        const dy = a * (0.6 * Math.sin(t * 83.7 + 0.5) + 0.4 * Math.sin(t * 49.9 + 2.9));
+        cam.style.transform = `translate(${dx}cqw, ${dy}cqw) scale(${s})`;
+      }
+
+      // ---------- escenas ----------
+      function dotScene(t) {
+        if (t >= 2.5) { hide(dot); hide(ring); return; }
+        let x0, x1, h, s = 1, glow;
+        if (t < 2) {
+          // latido: un golpe por compás, cada vez más fuerte
+          const tau = t % BEAT, k = kick(tau);
+          s = 1 + (0.3 + 0.35 * (t / 2)) * k;
+          glow = k;
+          x0 = CX - 1.2; x1 = CX + 1.2; h = 2.4;
+          const r = tau / BEAT;
+          ring.style.visibility = 'visible';
+          ring.style.opacity = 0.6 * (1 - r);
+          ring.style.transform = `scale(${1 + 3 * ease.outCubic(r)})`;
+        } else {
+          // se estira en una línea de lado a lado y sale disparada hacia la derecha
+          hide(ring);
+          const a = ease.outExpo(prog(t, 2, 2.2)), b = ease.inCubic(prog(t, 2.3, 2.5));
+          x1 = lerp(CX + 1.2, 102, a);
+          x0 = lerp(lerp(CX - 1.2, -2, a), 102, b);
+          h = lerp(2.4, 0.5, ease.outCubic(prog(t, 2, 2.1)));
+          glow = 0.6;
+        }
+        dot.style.visibility = 'visible';
+        dot.style.opacity = 1;
+        dot.style.left = `${x0}%`;
+        dot.style.width = `${x1 - x0}%`;
+        dot.style.height = `${h}cqw`;
+        dot.style.top = `calc(${CY}% - ${h / 2}cqw)`;
+        dot.style.transform = `scale(${s})`;
+        dot.style.boxShadow = `0 0 ${1 + 3 * glow}cqw rgba(225, 6, 0, ${0.25 + 0.45 * glow})`;
+      }
+
+      function v10Scene(t) {
+        if (t < 2.5 || t >= 8) return hide(v10);
+        const s = lerp(1.6, 1, ease.outBack(prog(t, 2.5, 2.74)))
+          * (1 + 0.035 * prog(t, 2.74, 7.85))
+          * (1 + 0.12 * ease.inCubic(prog(t, 7.85, 8)));
+        place(v10, Math.min(prog(t, 2.5, 2.56), 1 - prog(t, 7.85, 8)), 0, 0, s);
+      }
+
+      const STATS = [{ at: 5, to: 5.2, dec: 1 }, { at: 5.5, to: 620, dec: 0 }];
+      function statsScene(t) {
+        if (t < 5 || t >= 8) return hide(stats);
+        place(stats, 1 - prog(t, 7.85, 8), 0, 0, 1 + 0.1 * ease.inCubic(prog(t, 7.85, 8)));
+        STATS.forEach((c, i) => {
+          const el = statEls[i], end = c.at + 1;
+          el.firstChild.textContent = (c.to * ease.outQuart(prog(t, c.at, end))).toFixed(c.dec);
+          const hit = t >= end ? 0.08 * Math.exp(-(t - end) * 12) : 0;
+          fx(el, prog(t, c.at, c.at + 0.15), 3 * (1 - ease.outCubic(prog(t, c.at, c.at + 0.35))), 1 + hit);
+        });
+      }
+
+      function tachScene(t) {
+        if (t < 8 || t >= 12) return hide(tach);
+        const s = lerp(0.92, 1, ease.outCubic(prog(t, 8, 8.4))) * (1 + 0.1 * ease.inCubic(prog(t, 11.85, 12)));
+        place(tach, Math.min(prog(t, 8, 8.1), 1 - prog(t, 11.85, 12)), 0, 0, s);
+        arc.style.strokeDashoffset = ARC_LEN * (1 - ease.inOutCubic(prog(t, 8, 8.45)));
+        redArc.style.strokeDashoffset = RED_LEN * (1 - ease.outCubic(prog(t, 8.3, 8.5)));
+        ticks.style.opacity = prog(t, 8.2, 8.5);
+        needle.style.opacity = prog(t, 8.3, 8.45);
+        // acelerón de aviso en 8,5 s y golpe a la zona roja en 9 s, rebotando en el corte
+        let v = 0;
+        const blip = prog(t, 8.5, 8.9);
+        if (blip > 0 && blip < 1) v = 0.3 * (blip < 0.3 ? ease.outCubic(blip / 0.3) : 1 - ease.inOutCubic((blip - 0.3) / 0.7));
+        if (t >= 9) {
+          const p = prog(t, 9, 9.16), after = Math.max(0, t - 9.16);
+          v = 0.93 * ease.outExpo(p);
+          if (after > 0) v += 0.05 * Math.exp(-after * 6) * Math.sin(after * 30) + 0.012 * Math.sin(t * 41) + 0.008 * Math.sin(t * 67);
+        }
+        needle.setAttribute('transform', `rotate(${clamp(v, 0, 0.985) * 180})`);
+        redArc.style.opacity = v > REDLINE ? 0.75 + 0.25 * kick((t - 9) % BEAT) : 0.75;
+      }
+
+      function accelScene(t) {
+        if (t < 12 || t >= 15) { hide(accel); hide(chrono); return; }
+        const out = 1 - prog(t, 14.85, 15);
+        place(accel, Math.min(prog(t, 12, 12.15), out), 0, 3 * (1 - ease.outCubic(prog(t, 12, 12.35))));
+        const done = t >= 14;
+        const v = done ? 3.1 : Math.floor(31 * prog(t, 12.5, 14)) / 10;
+        chronoN.textContent = v.toFixed(1).replace('.', ',');
+        chronoN.style.color = done ? 'var(--red)' : '';
+        const hit = done ? 0.12 * Math.exp(-(t - 14) * 10) : 0;
+        place(chrono, Math.min(prog(t, 12.2, 12.35), out), 0, 3 * (1 - ease.outCubic(prog(t, 12.2, 12.5))), 1 + hit);
+      }
+
+      function vmaxScene(t) {
+        if (t < 15 || t >= 18) return hide(vmax);
+        vmaxN.textContent = Math.round(331 * ease.outQuad(prog(t, 15.05, 17)));
+        const hit = t >= 17 ? 0.08 * Math.exp(-(t - 17) * 9) : 0;
+        const s = lerp(1.12, 1, ease.outCubic(prog(t, 15, 15.3))) * (1 + hit) * (1 + 0.3 * ease.inCubic(prog(t, 17.8, 18)));
+        place(vmax, Math.min(prog(t, 15, 15.08), 1 - prog(t, 17.8, 18)), 0, 0, s);
+      }
+
+      function carScene(t) {
+        if (t < 18 || t >= 24.4) return hide(car);
+        car.style.visibility = 'visible';
+        car.style.opacity = 1 - prog(t, 24, 24.4);
+        const X = 1000 * ease.inOutSine(prog(t, 18.05, 20.6));
+        const leads = 1 - prog(t, 21, 21.5);
+        for (const p of carPaths) {
+          const s = lenAtX(p, X);
+          p.el.style.strokeDasharray = `${s} ${p.len + 1}`;
+          p.el.style.opacity = s > 0.5 ? (p.lead ? leads : 1) : 0;
+        }
+      }
+
+      function brandScene(t) {
+        if (t < 21 || t >= 24.4) { hide(brand); hide(years); return; }
+        const out = 1 - prog(t, 24, 24.4);
+        place(brand, out);
+        letters.forEach((el, i) => {
+          const a = 21 + i * 0.25;
+          fx(el, prog(t, a, a + 0.12), 2.5 * (1 - ease.outCubic(prog(t, a, a + 0.3))));
+        });
+        place(years, Math.min(prog(t, 22.75, 23.15), out), 0, 1.5 * (1 - ease.outCubic(prog(t, 22.75, 23.2))));
+      }
+
+      function outroScene(t) {
+        if (t < 24.4) return hide(outro);
+        place(outro, 1);
+        const wordsOut = 1 - prog(t, 25.7, 26.1);
+        fx(line1, 1, 2 * (1 - ease.outCubic(prog(t, 24.4, 24.9))));
+        fx(line2, 1, 2 * (1 - ease.outCubic(prog(t, 24.65, 25.15))));
+        word1.style.opacity = Math.min(prog(t, 24.4, 24.8), wordsOut);
+        word2.style.opacity = Math.min(prog(t, 24.65, 25.05), wordsOut);
+        // el punto final es el mismo punto rojo del inicio: late una vez y se apaga el último
+        fx(period, Math.min(prog(t, 24.65, 25.05), 1 - prog(t, 26.15, 26.55)), 0, 1 + 0.5 * kick(t - 26));
+      }
+
+      let lastT = null;
+      function render(t) {
+        lastT = t;
+        camera(t);
+        speedLines(t);
+        dotScene(t);
+        v10Scene(t);
+        statsScene(t);
+        tachScene(t);
+        accelScene(t);
+        vmaxScene(t);
+        carScene(t);
+        brandScene(t);
+        outroScene(t);
+      }
+
+      // ---------- reproducción: toque para empezar, toque al final para repetir ----------
+      const fontsReady = Promise.race([
+        document.fonts ? document.fonts.ready : Promise.resolve(),
+        new Promise(r => setTimeout(r, 1500)),
+      ]);
+      let running = false, start = 0;
+      function frame(now) {
+        const t = (now - start) / 1000;
+        render(Math.min(t, END));
+        if (t < END) requestAnimationFrame(frame);
+        else { running = false; document.body.classList.remove('playing'); }
+      }
+      async function play() {
+        if (running) return;
+        running = true;
+        document.body.classList.add('playing');
+        await fontsReady;
+        start = performance.now();
+        requestAnimationFrame(frame);
+      }
+
+      window.addEventListener('pointerdown', play);
+      window.addEventListener('keydown', e => {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); play(); }
+      });
+      window.addEventListener('resize', resize);
+      resize();
+      carPaths.forEach(p => { p.el.style.opacity = 0; });
+    })();
+  </script>
+</body>
+</html>
